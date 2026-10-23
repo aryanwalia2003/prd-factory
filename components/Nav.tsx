@@ -23,6 +23,9 @@ export default function Nav() {
               <Link href="/templates" className="text-zinc-600 hover:text-zinc-900">
                 Templates
               </Link>
+              <Link href="/account" className="text-zinc-600 hover:text-zinc-900">
+                Account
+              </Link>
               <span className="text-zinc-400">{session.user.email}</span>
               <button
                 onClick={async () => {

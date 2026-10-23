@@ -67,6 +67,17 @@ export const customTemplate = sqliteTable("custom_template", {
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
 
+// MCP tools (save_prd) ko authenticate karne ke liye — ek user ke paas ek active key.
+export const apiKey = sqliteTable("api_key", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .unique()
+    .references(() => user.id, { onDelete: "cascade" }),
+  token: text("token").notNull().unique(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+});
+
 // Saved/exported PRDs — team-shared, har user dekh sakta hai.
 export const prd = sqliteTable("prd", {
   id: text("id").primaryKey(),

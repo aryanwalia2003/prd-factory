@@ -2,6 +2,29 @@ import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
 import { buildPrdMarkdown, missingRequiredSections } from "@/lib/markdown";
 import { getAllTemplates, getAnyTemplate } from "@/lib/template-store";
+import { getUserIdForApiKey } from "@/lib/db/api-keys";
+import { createPrd } from "@/lib/db/prds";
+import type { PrdTemplate } from "@/lib/templates";
+
+// draft_prd aur save_prd dono ye hi validate+build karte hain.
+function validateAndBuild(
+  template: PrdTemplate,
+  sections: Record<string, string>,
+  meta: { title: string; author?: string },
+): { error: string } | { markdown: string } {
+  const missing = missingRequiredSections(template, sections);
+  if (missing.length > 0) {
+    const missingTitles = template.sections
+      .filter((s) => missing.includes(s.id))
+      .map((s) => `${s.id} ("${s.title}")`)
+      .join(", ");
+    return {
+      error: `Missing required sections for "${template.label}": ${missingTitles}. PM se yeh sections pucho, phir dobara call karo.`,
+    };
+  }
+  const date = new Date().toISOString().slice(0, 10);
+  return { markdown: buildPrdMarkdown(template, sections, { title: meta.title, author: meta.author, date }) };
+}
 
 const handler = createMcpHandler((server) => {
   server.registerTool(
@@ -71,26 +94,60 @@ const handler = createMcpHandler((server) => {
         return { content: [{ type: "text", text: `Unknown category: ${category}` }], isError: true };
       }
 
-      const missing = missingRequiredSections(template, sections);
-      if (missing.length > 0) {
-        const missingTitles = template.sections
-          .filter((s) => missing.includes(s.id))
-          .map((s) => `${s.id} ("${s.title}")`)
-          .join(", ");
+      const result = validateAndBuild(template, sections, { title, author });
+      if ("error" in result) {
+        return { content: [{ type: "text", text: result.error }], isError: true };
+      }
+      return { content: [{ type: "text", text: result.markdown }] };
+    },
+  );
+
+  server.registerTool(
+    "save_prd",
+    {
+      title: "Save PRD",
+      description:
+        "Draft_prd jaisa hi PRD banata hai, lekin isse app mein save (DB) bhi kar deta hai taaki web pe dikhe. apiKey chahiye — user /account page se apna MCP API key generate karke de sakta hai.",
+      inputSchema: z.object({
+        apiKey: z.string(),
+        category: z.string(),
+        title: z.string().min(1),
+        author: z.string().optional(),
+        sections: z.record(z.string(), z.string()),
+      }),
+    },
+    async ({ apiKey, category, title, author, sections }) => {
+      const userId = await getUserIdForApiKey(apiKey);
+      if (!userId) {
         return {
-          content: [
-            {
-              type: "text",
-              text: `Missing required sections for "${template.label}": ${missingTitles}. PM se yeh sections pucho, phir dobara draft_prd call karo.`,
-            },
-          ],
+          content: [{ type: "text", text: "Invalid API key. /account page se apna key check karo." }],
           isError: true,
         };
       }
 
-      const date = new Date().toISOString().slice(0, 10);
-      const markdown = buildPrdMarkdown(template, sections, { title, author, date });
-      return { content: [{ type: "text", text: markdown }] };
+      const template = await getAnyTemplate(category);
+      if (!template) {
+        return { content: [{ type: "text", text: `Unknown category: ${category}` }], isError: true };
+      }
+
+      const result = validateAndBuild(template, sections, { title, author });
+      if ("error" in result) {
+        return { content: [{ type: "text", text: result.error }], isError: true };
+      }
+
+      const id = await createPrd({
+        categoryId: category,
+        title,
+        author,
+        sections,
+        markdown: result.markdown,
+        createdBy: userId,
+      });
+
+      const baseUrl = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
+      return {
+        content: [{ type: "text", text: `Saved. ${baseUrl}/prds/${id}` }],
+      };
     },
   );
 });
