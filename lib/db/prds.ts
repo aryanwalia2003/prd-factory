@@ -56,6 +56,26 @@ export async function createPrd(input: {
   return id;
 }
 
+export async function updatePrd(
+  id: string,
+  userId: string,
+  input: { title: string; author?: string; sections: Record<string, string>; markdown: string },
+) {
+  const [row] = await db.select().from(prd).where(eq(prd.id, id));
+  if (!row || row.createdBy !== userId) return false;
+  await db
+    .update(prd)
+    .set({
+      title: input.title,
+      author: input.author,
+      sectionsJson: JSON.stringify(input.sections),
+      markdown: input.markdown,
+      updatedAt: new Date(),
+    })
+    .where(eq(prd.id, id));
+  return true;
+}
+
 export async function deletePrd(id: string, userId: string) {
   const [row] = await db.select().from(prd).where(eq(prd.id, id));
   if (!row || row.createdBy !== userId) return false;

@@ -28,7 +28,14 @@ export default async function PrdViewPage({
         </Link>
         <div className="mt-2 flex items-center justify-between">
           <h1 className="text-xl font-semibold text-zinc-900">{row.title}</h1>
-          {isOwner && <DeletePrdButton id={row.id} />}
+          {isOwner && (
+            <div className="flex items-center gap-3">
+              <Link href={`/prds/${row.id}/edit`} className="text-sm text-zinc-600 hover:underline">
+                Edit
+              </Link>
+              <DeletePrdButton id={row.id} />
+            </div>
+          )}
         </div>
         <pre className="mt-6 overflow-auto rounded-md border border-zinc-200 bg-white p-4 text-xs leading-relaxed whitespace-pre-wrap text-zinc-800">
           {row.markdown}

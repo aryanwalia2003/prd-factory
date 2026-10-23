@@ -7,12 +7,25 @@ import { PrdTemplate } from "@/lib/templates";
 import { buildPrdMarkdown, missingRequiredSections } from "@/lib/markdown";
 import { useSession } from "@/lib/auth-client";
 
-export default function PrdForm({ template }: { template: PrdTemplate }) {
+type ExistingPrd = {
+  id: string;
+  title: string;
+  author?: string | null;
+  sections: Record<string, string>;
+};
+
+export default function PrdForm({
+  template,
+  existing,
+}: {
+  template: PrdTemplate;
+  existing?: ExistingPrd;
+}) {
   const router = useRouter();
   const { data: session } = useSession();
-  const [title, setTitle] = useState("");
-  const [author, setAuthor] = useState("");
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [title, setTitle] = useState(existing?.title ?? "");
+  const [author, setAuthor] = useState(existing?.author ?? "");
+  const [answers, setAnswers] = useState<Record<string, string>>(existing?.sections ?? {});
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -47,8 +60,9 @@ export default function PrdForm({ template }: { template: PrdTemplate }) {
   async function save() {
     setSaving(true);
     setSaveError("");
-    const res = await fetch("/api/prds", {
-      method: "POST",
+    const url = existing ? `/api/prds/${existing.id}` : "/api/prds";
+    const res = await fetch(url, {
+      method: existing ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ categoryId: template.id, title, author, sections: answers }),
     });
@@ -127,7 +141,7 @@ export default function PrdForm({ template }: { template: PrdTemplate }) {
                     disabled={!canExport || saving}
                     className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    {saving ? "Saving..." : "Save"}
+                    {saving ? "Saving..." : existing ? "Update" : "Save"}
                   </button>
                 )}
               </div>
