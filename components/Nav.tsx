@@ -20,8 +20,8 @@ export default function Nav() {
               <Link href="/prds" className="text-zinc-600 hover:text-zinc-900">
                 My PRDs
               </Link>
-              <Link href="/templates/new" className="text-zinc-600 hover:text-zinc-900">
-                + Template
+              <Link href="/templates" className="text-zinc-600 hover:text-zinc-900">
+                Templates
               </Link>
               <span className="text-zinc-400">{session.user.email}</span>
               <button
