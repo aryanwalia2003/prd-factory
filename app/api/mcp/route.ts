@@ -1,9 +1,7 @@
 import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
-import { PRD_CATEGORY_IDS, PRD_TEMPLATES, getTemplate } from "@/lib/templates";
 import { buildPrdMarkdown, missingRequiredSections } from "@/lib/markdown";
-
-const categoryEnum = z.enum(PRD_CATEGORY_IDS);
+import { getAllTemplates, getAnyTemplate } from "@/lib/template-store";
 
 const handler = createMcpHandler((server) => {
   server.registerTool(
@@ -11,26 +9,30 @@ const handler = createMcpHandler((server) => {
     {
       title: "List PRD Templates",
       description:
-        "Company ke standardised PRD categories list karo (New Feature, Enhancement, Bug Fix, Deprecation, Experiment).",
+        "Company ke standardised PRD categories list karo — built-in (New Feature, Enhancement, Bug Fix, Deprecation, Experiment) + team ke custom templates.",
       inputSchema: z.object({}),
     },
-    async () => ({
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify(
-            PRD_TEMPLATES.map((t) => ({
-              id: t.id,
-              label: t.label,
-              description: t.description,
-              sectionCount: t.sections.length,
-            })),
-            null,
-            2,
-          ),
-        },
-      ],
-    }),
+    async () => {
+      const templates = await getAllTemplates();
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              templates.map((t) => ({
+                id: t.id,
+                label: t.label,
+                description: t.description,
+                sectionCount: t.sections.length,
+                custom: t.custom,
+              })),
+              null,
+              2,
+            ),
+          },
+        ],
+      };
+    },
   );
 
   server.registerTool(
@@ -38,11 +40,11 @@ const handler = createMcpHandler((server) => {
     {
       title: "Get PRD Template",
       description:
-        "Ek category ka full section structure do — required/optional sections, aur har section ke liye prompt guidance. Draft_prd call karne se pehle yeh use karo taaki pata ho PM se kya puchna hai.",
-      inputSchema: z.object({ category: categoryEnum }),
+        "Ek category ka full section structure do — required/optional sections, aur har section ke liye prompt guidance. Draft_prd call karne se pehle yeh use karo taaki pata ho PM se kya puchna hai. list_prd_templates se valid category ids milenge.",
+      inputSchema: z.object({ category: z.string() }),
     },
     async ({ category }) => {
-      const template = getTemplate(category);
+      const template = await getAnyTemplate(category);
       if (!template) {
         return { content: [{ type: "text", text: `Unknown category: ${category}` }], isError: true };
       }
@@ -57,14 +59,14 @@ const handler = createMcpHandler((server) => {
       description:
         "Category ke template structure follow karke standardised PRD markdown generate karo. 'sections' mein section id -> content map do (get_prd_template se section ids milenge). Required section missing ho to error aayega.",
       inputSchema: z.object({
-        category: categoryEnum,
+        category: z.string(),
         title: z.string().min(1),
         author: z.string().optional(),
         sections: z.record(z.string(), z.string()),
       }),
     },
     async ({ category, title, author, sections }) => {
-      const template = getTemplate(category);
+      const template = await getAnyTemplate(category);
       if (!template) {
         return { content: [{ type: "text", text: `Unknown category: ${category}` }], isError: true };
       }

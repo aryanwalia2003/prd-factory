@@ -2,14 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { PrdTemplate } from "@/lib/templates";
 import { buildPrdMarkdown, missingRequiredSections } from "@/lib/markdown";
+import { useSession } from "@/lib/auth-client";
 
 export default function PrdForm({ template }: { template: PrdTemplate }) {
+  const router = useRouter();
+  const { data: session } = useSession();
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [copied, setCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const missing = missingRequiredSections(template, answers);
   const markdown = buildPrdMarkdown(template, answers, {
@@ -36,6 +42,24 @@ export default function PrdForm({ template }: { template: PrdTemplate }) {
     await navigator.clipboard.writeText(markdown);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  }
+
+  async function save() {
+    setSaving(true);
+    setSaveError("");
+    const res = await fetch("/api/prds", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ categoryId: template.id, title, author, sections: answers }),
+    });
+    setSaving(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setSaveError(data.error ?? "Save nahi hua");
+      return;
+    }
+    const { id } = await res.json();
+    router.push(`/prds/${id}`);
   }
 
   return (
@@ -93,10 +117,19 @@ export default function PrdForm({ template }: { template: PrdTemplate }) {
                 <button
                   onClick={download}
                   disabled={!canExport}
-                  className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Download .md
                 </button>
+                {session && (
+                  <button
+                    onClick={save}
+                    disabled={!canExport || saving}
+                    className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {saving ? "Saving..." : "Save"}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -109,6 +142,12 @@ export default function PrdForm({ template }: { template: PrdTemplate }) {
                   .join(", ")}
               </p>
             )}
+            {!session && (
+              <p className="mt-2 text-xs text-zinc-500">
+                <Link href="/login" className="underline">Login</Link> karo PRD save karne ke liye.
+              </p>
+            )}
+            {saveError && <p className="mt-2 text-xs text-red-600">{saveError}</p>}
 
             <pre className="mt-3 h-[70vh] overflow-auto rounded-md border border-zinc-200 bg-white p-4 text-xs leading-relaxed whitespace-pre-wrap text-zinc-800">
               {markdown}

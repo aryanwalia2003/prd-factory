@@ -18,15 +18,17 @@ export type PrdSection = {
 };
 
 export type PrdTemplate = {
-  id: PrdCategoryId;
+  id: string; // built-in ke liye PrdCategoryId, custom ke liye user-defined slug
   label: string;
   description: string;
   sections: PrdSection[];
+  custom: boolean; // true = DB se aaya, user edit/delete kar sakta hai
 };
 
 export const PRD_TEMPLATES: PrdTemplate[] = [
   {
     id: "new-feature",
+    custom: false,
     label: "New Feature",
     description: "Net-new capability jo pehle product mein exist nahi karti.",
     sections: [
@@ -44,6 +46,7 @@ export const PRD_TEMPLATES: PrdTemplate[] = [
   },
   {
     id: "enhancement",
+    custom: false,
     label: "Enhancement",
     description: "Existing feature ko improve karna — naya feature nahi.",
     sections: [
@@ -60,6 +63,7 @@ export const PRD_TEMPLATES: PrdTemplate[] = [
   },
   {
     id: "bug-fix",
+    custom: false,
     label: "Bug Fix / Tech Debt",
     description: "Kuch toota hua fix karna, ya purana debt saaf karna.",
     sections: [
@@ -75,6 +79,7 @@ export const PRD_TEMPLATES: PrdTemplate[] = [
   },
   {
     id: "deprecation",
+    custom: false,
     label: "Deprecation / Removal",
     description: "Kisi feature/API ko hatana ya band karna.",
     sections: [
@@ -88,6 +93,7 @@ export const PRD_TEMPLATES: PrdTemplate[] = [
   },
   {
     id: "experiment",
+    custom: false,
     label: "Experiment / Spike",
     description: "Hypothesis test karna ya technical spike — abhi ship nahi.",
     sections: [

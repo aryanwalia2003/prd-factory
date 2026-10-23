@@ -42,3 +42,7 @@ next-env.d.ts
 
 # claude code tooling cache
 .impeccable/
+
+# local sqlite fallback (Turso creds na ho to)
+*.db
+*.db-*
