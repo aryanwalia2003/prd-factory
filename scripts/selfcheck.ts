@@ -19,6 +19,6 @@ assert.equal(missingRequiredSections(template, allFilled).length, 0);
 const md = buildPrdMarkdown(template, { ...allFilled, problem: "Login crashes" }, { title: "T" });
 assert.ok(md.includes("## Problem Statement"));
 assert.ok(md.includes("Login crashes"));
-assert.ok(!md.includes("## Risk of Fix"), "empty optional section skip nahi hua");
+assert.ok(!md.includes("## Risk & Rabbit Holes"), "empty optional section skip nahi hua");
 
 console.log("selfcheck ok");
